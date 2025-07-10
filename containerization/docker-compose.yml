@@ -1,0 +1,11 @@
+services:
+  redis:
+    image: redis
+    hostname: redis-server
+    # networks:
+    #   - backend-network
+    ports:
+      - 6380:6379
+    environment:
+      - REDIS_PASSWORD=senha123
+    command: redis-server --requirepass senha123
