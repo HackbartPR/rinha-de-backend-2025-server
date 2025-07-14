@@ -21,24 +21,41 @@ namespace rinha_de_backend_2025_processor_availability
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			BaseResponse<HealthCheckResponse> defaultResponse = await _defaultProcessor.HealthCheck();
-			BaseResponse<HealthCheckResponse> fallbackResponse = await _fallbackProcessor.HealthCheck();
+			while (!stoppingToken.IsCancellationRequested)
+			{
+				var defaultResponse = await _defaultProcessor.HealthCheck();
+				var fallbackResponse = await _fallbackProcessor.HealthCheck();
 
-			var teste = await _cache.GetStringAsync("processor");
-			if (defaultResponse.StatusCode != HttpStatusCode.OK && defaultResponse.StatusCode != HttpStatusCode.TooManyRequests)
-				await _cache.SetStringAsync("processor", "2", stoppingToken);
-			else if (fallbackResponse.StatusCode != HttpStatusCode.OK && fallbackResponse.StatusCode != HttpStatusCode.TooManyRequests)
-				await _cache.SetStringAsync("processor", "1", stoppingToken);
-			else if (defaultResponse.Data.HasValue && defaultResponse.Data.Value.Failing)
-				await _cache.SetStringAsync("processor", "2", stoppingToken);
-			else if (fallbackResponse.Data.HasValue && fallbackResponse.Data.Value.Failing)
-				await _cache.SetStringAsync("processor", "1", stoppingToken);
-			else if (defaultResponse.Data.HasValue && fallbackResponse.Data.HasValue && defaultResponse.Data.Value.MinResponseTime > (fallbackResponse.Data.Value.MinResponseTime * 2))
-				await _cache.SetStringAsync("processor", "2", stoppingToken);
-			else
-				await _cache.SetStringAsync("processor", "1", stoppingToken);
+				string selectedProcessor;
 
-			await Task.Delay(5000, stoppingToken);
+				bool IsUnhealthy(BaseResponse<HealthCheckResponse> response) =>
+					response.StatusCode != HttpStatusCode.OK &&
+					response.StatusCode != HttpStatusCode.TooManyRequests;
+
+				bool IsFailing(BaseResponse<HealthCheckResponse> response) =>
+					response.Data.HasValue && response.Data.Value.Failing;
+
+				bool IsMuchSlower(BaseResponse<HealthCheckResponse> primary, BaseResponse<HealthCheckResponse> secondary) =>
+					primary.Data.HasValue && secondary.Data.HasValue &&
+					primary.Data.Value.MinResponseTime > 100 &&
+					primary.Data.Value.MinResponseTime > (secondary.Data.Value.MinResponseTime * 2);
+
+				if (IsUnhealthy(defaultResponse))
+					selectedProcessor = EProcessorService.Fallback.GetDescription();
+				else if (IsUnhealthy(fallbackResponse))
+					selectedProcessor = EProcessorService.Default.GetDescription();
+				else if (IsFailing(defaultResponse))
+					selectedProcessor = EProcessorService.Fallback.GetDescription();
+				else if (IsFailing(fallbackResponse))
+					selectedProcessor = EProcessorService.Default.GetDescription();
+				else if (IsMuchSlower(defaultResponse, fallbackResponse))
+					selectedProcessor = EProcessorService.Fallback.GetDescription();
+				else
+					selectedProcessor = EProcessorService.Default.GetDescription();
+
+				await _cache.SetStringAsync("processor", selectedProcessor, stoppingToken);
+				await Task.Delay(5000, stoppingToken);
+			}
 		}
 	}
 }

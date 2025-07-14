@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 
 namespace rinha_de_backend_2025_processor_availability
 {
@@ -49,5 +48,7 @@ namespace rinha_de_backend_2025_processor_availability
 				};
 			}
 		}
+
+
 	}
 }
