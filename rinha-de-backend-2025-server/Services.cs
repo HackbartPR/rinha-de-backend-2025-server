@@ -54,7 +54,8 @@ namespace rinha_de_backend_2025_server
 
 	public class ServerRepository
 	{
-		private readonly string _connectionString = "";
+		//TODO: Passar via variáveis de ambiente
+		private readonly string _connectionString = "Server=localhost;Port=54323;User Id=postgres;Password=postgres;Database=rinha";
 
 		public async Task Add(EProcessorService processor, decimal amount, CancellationToken cancellationToken)
 		{
@@ -63,26 +64,24 @@ namespace rinha_de_backend_2025_server
 			{
 				await conn.OpenAsync(cancellationToken);
 
-				string query = @$"INSERT INTO payments (processor, amount, requested_at) 
-					VALUES ({(int)processor}, {amount}, {DateTime.UtcNow})";
+				string query = @$"INSERT INTO payments (processor, amount, requested_at) VALUES (@p0, @p1, @p2)";
 
-				await conn.ExecuteAsync(query, cancellationToken);
+				await conn.ExecuteAsync(query, new { p0 = (int)processor, p1 = amount, p2 = DateTime.UtcNow });
 			}
 			catch (Exception) { throw; }
 			finally { conn.Close(); }
 		}
 
-		public async Task Summary(DateTime? From, DateTime? To, CancellationToken cancellationToken)
+		public async Task<IEnumerable<PaymentDTO>> Summary(DateTime? From, DateTime? To, CancellationToken cancellationToken)
 		{
 			using var conn = new SqlConnection(_connectionString);
 			try
 			{
 				await conn.OpenAsync(cancellationToken);
 
-				string query = @$"SELECT processor, amount FROM payments
-					WHERE ({From} IS NULL OR requested_at >= '{From}') AND ({To} IS NULL OR requested_at <= '{To}')";
+				string query = @$"SELECT processor, amount FROM payments WHERE (@p0 IS NULL OR requested_at >= @p0) AND (@p1 IS NULL OR requested_at <= @p1)";
 
-				await conn.ExecuteAsync(query, cancellationToken);
+				return await conn.QueryAsync<PaymentDTO>(query, new { p0 = From, p1 = To });
 			}
 			catch (Exception) { throw; }
 			finally { conn.Close(); }

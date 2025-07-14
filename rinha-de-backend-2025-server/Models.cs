@@ -43,6 +43,13 @@ namespace rinha_de_backend_2025_server
 		public decimal TotalAmount { get; set; }
 	}
 
+	public struct PaymentDTO
+	{
+		public EProcessorService Processor { get; set; }
+
+		public decimal Amount { get; set; }
+	}
+
 	public enum EProcessorService
 	{
 		[Description("1")]

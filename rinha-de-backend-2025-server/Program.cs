@@ -23,12 +23,13 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 
 builder.Services.AddScoped<PaymentProcessorServiceFactory>();
+builder.Services.AddScoped<ServerRepository>();
 
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapPost("/payments", async (PaymentRequest request, IDistributedCache cache, PaymentProcessorServiceFactory serviceFactory, CancellationToken cancellationToken = default) =>
+app.MapPost("/payments", async (PaymentRequest request, IDistributedCache cache, PaymentProcessorServiceFactory serviceFactory,  ServerRepository repository, CancellationToken cancellationToken = default) =>
 {
 	try
 	{
@@ -38,38 +39,34 @@ app.MapPost("/payments", async (PaymentRequest request, IDistributedCache cache,
 		BaseResponse<PaymentResponse> response = await service.Payments(request, cancellationToken);
 		
 		if (response.IsSuccess)
-		{
-			//TODO: Trocar para o banco Postgress
-			string summaryString = await cache.GetStringAsync($"summary_processor_{processor}", cancellationToken) ?? string.Empty;
-			IndividualPaymentSummary paymentSumary = string.IsNullOrEmpty(summaryString) ? new IndividualPaymentSummary() : JsonSerializer.Deserialize<IndividualPaymentSummary>(summaryString);
-
-			paymentSumary.TotalRequests += 1;
-			paymentSumary.TotalAmount += request.Amount;
-
-			summaryString = JsonSerializer.Serialize(paymentSumary);
-			await cache.SetStringAsync($"summary_processor_{processor}", summaryString, cancellationToken);
-		}
+			await repository.Add(processor, request.Amount, cancellationToken);
 
 		return Results.StatusCode((int)response.StatusCode);
 	}
 	catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-app.MapGet("/payments-summary", async ([FromQuery] DateTime? from, [FromQuery] DateTime? to, IDistributedCache cache, PaymentProcessorServiceFactory serviceFactory, CancellationToken cancellationToken = default) =>
+app.MapGet("/payments-summary", async ([FromQuery] DateTime? from, [FromQuery] DateTime? to, ServerRepository repository, CancellationToken cancellationToken = default) =>
 {
 	try
 	{
-		// Utilizar banco Postgress
-		string summaryDefaultString = await cache.GetStringAsync($"summary_processor_{EProcessorService.Default}", cancellationToken) ?? string.Empty;
-		string summaryFallbackString = await cache.GetStringAsync($"summary_processor_{EProcessorService.Fallback}", cancellationToken) ?? string.Empty;
+		IEnumerable<PaymentDTO> payments = await repository.Summary(from, to, cancellationToken);
+		IEnumerable<PaymentDTO> paymentsDefault = payments.Where(p => p.Processor == EProcessorService.Default);
+        IEnumerable<PaymentDTO> paymentsFallback = payments.Where(p => p.Processor == EProcessorService.Fallback);
 
-		IndividualPaymentSummary paymentSumaryDefault = string.IsNullOrEmpty(summaryDefaultString) ? new IndividualPaymentSummary() : JsonSerializer.Deserialize<IndividualPaymentSummary>(summaryDefaultString);
-		IndividualPaymentSummary paymentSumaryFallback = string.IsNullOrEmpty(summaryFallbackString) ? new IndividualPaymentSummary() : JsonSerializer.Deserialize<IndividualPaymentSummary>(summaryFallbackString);
-
-		PaymentSummaryResponse response = new()
+        PaymentSummaryResponse response = new()
 		{
-			Default = paymentSumaryDefault,
-			Fallback = paymentSumaryFallback,
+			Default = new IndividualPaymentSummary()
+			{
+				TotalAmount = paymentsDefault.Sum(p => p.Amount),
+				TotalRequests = paymentsDefault.Count(),
+			},
+
+			Fallback = new IndividualPaymentSummary()
+			{
+				TotalAmount = paymentsFallback.Sum(p => p.Amount),
+				TotalRequests = paymentsFallback.Count(),
+			}
 		};
 
 		return Results.Ok(response);
