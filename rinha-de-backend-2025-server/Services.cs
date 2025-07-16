@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Data.SqlClient;
+using Npgsql;
 using System.Threading.Tasks;
 
 namespace rinha_de_backend_2025_server
@@ -55,11 +56,11 @@ namespace rinha_de_backend_2025_server
 	public class ServerRepository
 	{
 		//TODO: Passar via variáveis de ambiente
-		private readonly string _connectionString = "Server=localhost;Port=54323;User Id=postgres;Password=postgres;Database=rinha";
+		private readonly string _connectionString = "Server=server-db;Port=5432;User Id=postgres;Password=postgres;Database=rinha";
 
 		public async Task Add(EProcessorService processor, decimal amount, CancellationToken cancellationToken)
 		{
-			using var conn = new SqlConnection(_connectionString);
+			using var conn = new NpgsqlConnection(_connectionString);
 			try
 			{
 				await conn.OpenAsync(cancellationToken);
@@ -74,12 +75,14 @@ namespace rinha_de_backend_2025_server
 
 		public async Task<IEnumerable<PaymentDTO>> Summary(DateTime? From, DateTime? To, CancellationToken cancellationToken)
 		{
-			using var conn = new SqlConnection(_connectionString);
+			using var conn = new NpgsqlConnection(_connectionString);
 			try
 			{
 				await conn.OpenAsync(cancellationToken);
 
-				string query = @$"SELECT processor, amount FROM payments WHERE (@p0 IS NULL OR requested_at >= @p0) AND (@p1 IS NULL OR requested_at <= @p1)";
+				string query = @$"SELECT processor, amount FROM payments WHERE 
+					(@p0::timestamp IS NULL OR requested_at >= @p0::timestamp) AND 
+					(@p1::timestamp IS NULL OR requested_at <= @p1::timestamp)";
 
 				return await conn.QueryAsync<PaymentDTO>(query, new { p0 = From, p1 = To });
 			}

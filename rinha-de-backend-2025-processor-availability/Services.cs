@@ -48,7 +48,5 @@ namespace rinha_de_backend_2025_processor_availability
 				};
 			}
 		}
-
-
 	}
 }
