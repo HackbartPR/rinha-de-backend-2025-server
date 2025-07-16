@@ -6,18 +6,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<PaymentProcessorDefaultService>("default", client =>
 {
-	client.BaseAddress = new Uri("http://payment-processor-default:8080/");
+    client.BaseAddress = new Uri(builder.Configuration["Payments:Default"] ?? string.Empty);
 });
 
 builder.Services.AddHttpClient<PaymentProcessorFallbackService>("fallback", client =>
 {
-	client.BaseAddress = new Uri("http://payment-processor-fallback:8080/");
+    client.BaseAddress = new Uri(builder.Configuration["Payments:Fallback"] ?? string.Empty);
 });
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-	options.Configuration = "redis-server:6379, password=senha123";
-	options.InstanceName = "Rinha_";
+	options.Configuration = builder.Configuration["Redis:Connection"] ?? string.Empty;
+	options.InstanceName = builder.Configuration["Redis:Suffix"] ?? string.Empty;
 });
 
 builder.Services.AddScoped<PaymentProcessorServiceFactory>();
@@ -38,6 +38,15 @@ app.MapPost("/payments", async (PaymentRequest request, IDistributedCache cache,
 		
 		if (response.IsSuccess)
 			await repository.Add(processor, request.Amount, cancellationToken);
+		else
+		{
+            EProcessorService anotherProcessor = processor == EProcessorService.Default ? EProcessorService.Fallback : EProcessorService.Default;
+            IPaymentProcessorsService anotherService = serviceFactory.GetService(anotherProcessor);
+            BaseResponse<PaymentResponse> anotherResponse = await anotherService.Payments(request, cancellationToken);
+
+            if (response.IsSuccess)
+                await repository.Add(anotherProcessor, request.Amount, cancellationToken);
+        }
 
 		return Results.StatusCode((int)response.StatusCode);
 	}

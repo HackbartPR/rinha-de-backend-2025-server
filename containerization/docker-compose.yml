@@ -6,6 +6,10 @@ x-server: &default-server
       - payment-processor
   environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Payments__Default: http://payment-processor-default:8080/
+      Payments__Fallback: http://payment-processor-fallback:8080/
+      Redis__Connection: redis-server:6379, password=senha123
+      Redis__Suffix: rinha_
   depends_on:
       - server-db
 
@@ -28,6 +32,10 @@ services:
       - payment-processor
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Payments__Default: http://payment-processor-default:8080/
+      Payments__Fallback: http://payment-processor-fallback:8080/
+      Redis__Connection: redis-server:6379, password=senha123
+      Redis__Suffix: rinha_
     depends_on:
       - redis
       

@@ -1,9 +1,5 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Data.SqlClient;
 using Npgsql;
-using System.Threading.Tasks;
 
 namespace rinha_de_backend_2025_server
 {
@@ -19,7 +15,7 @@ namespace rinha_de_backend_2025_server
 
 		public IPaymentProcessorsService GetService(EProcessorService service)
 			=> service == EProcessorService.Default ? _defaultProcessor : _fallbackProcessor;
-	}
+    }
 
 	public class PaymentProcessorDefaultService(HttpClient httpClient) : IPaymentProcessorsService
 	{
