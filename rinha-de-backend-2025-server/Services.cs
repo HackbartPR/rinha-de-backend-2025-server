@@ -51,8 +51,7 @@ namespace rinha_de_backend_2025_server
 
 	public class ServerRepository
 	{
-		//TODO: Passar via variáveis de ambiente
-		private readonly string _connectionString = "Server=server-db;Port=5432;User Id=postgres;Password=postgres;Database=rinha";
+		private readonly string _connectionString = "Server=server-db;Port=5432;User Id=postgres;Password=postgres;Database=rinha;Pooling=true;Minimum Pool Size=10;Maximum Pool Size=200;";
 
 		public async Task Add(EProcessorService processor, decimal amount, CancellationToken cancellationToken)
 		{

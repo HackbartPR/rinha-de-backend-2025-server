@@ -37,8 +37,8 @@ namespace rinha_de_backend_2025_processor_availability
 
 				bool IsMuchSlower(BaseResponse<HealthCheckResponse> primary, BaseResponse<HealthCheckResponse> secondary) =>
 					primary.Data.HasValue && secondary.Data.HasValue &&
-					primary.Data.Value.MinResponseTime > 20 &&
-					primary.Data.Value.MinResponseTime > secondary.Data.Value.MinResponseTime;
+					primary.Data.Value.MinResponseTime > 100 &&
+					primary.Data.Value.MinResponseTime > (secondary.Data.Value.MinResponseTime * 2);
 
 				if (IsUnhealthy(defaultResponse))
 					selectedProcessor = EProcessorService.Fallback.GetDescription();

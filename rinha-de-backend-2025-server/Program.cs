@@ -40,17 +40,17 @@ app.MapPost("/payments", async (PaymentRequest request, IDistributedCache cache,
 			await repository.Add(processor, request.Amount, cancellationToken);
 		else
 		{
-            EProcessorService anotherProcessor = processor == EProcessorService.Default ? EProcessorService.Fallback : EProcessorService.Default;
-            IPaymentProcessorsService anotherService = serviceFactory.GetService(anotherProcessor);
-            BaseResponse<PaymentResponse> anotherResponse = await anotherService.Payments(request, cancellationToken);
+			EProcessorService anotherProcessor = processor == EProcessorService.Default ? EProcessorService.Fallback : EProcessorService.Default;
+			IPaymentProcessorsService anotherService = serviceFactory.GetService(anotherProcessor);
+			BaseResponse<PaymentResponse> anotherResponse = await anotherService.Payments(request, cancellationToken);
 
-            if (response.IsSuccess)
-                await repository.Add(anotherProcessor, request.Amount, cancellationToken);
-        }
+			if (response.IsSuccess)
+				await repository.Add(anotherProcessor, request.Amount, cancellationToken);
+		}
 
 		return Results.StatusCode((int)response.StatusCode);
 	}
-	catch (Exception ex) { return Results.Problem(ex.Message); }
+	catch (Exception ex) { return Results.Problem(); }
 });
 
 app.MapGet("/payments-summary", async ([FromQuery] DateTime? from, [FromQuery] DateTime? to, ServerRepository repository, CancellationToken cancellationToken = default) =>
@@ -78,7 +78,7 @@ app.MapGet("/payments-summary", async ([FromQuery] DateTime? from, [FromQuery] D
 
 		return Results.Ok(response);
 	}
-	catch (Exception ex) { return Results.Problem(ex.Message); }
+	catch (Exception ex) { return Results.Problem(); }
 });
 
 app.Run();
