@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Npgsql;
+using StackExchange.Redis;
 
 namespace rinha_de_backend_2025_server
 {
@@ -13,9 +14,14 @@ namespace rinha_de_backend_2025_server
 		private readonly PaymentProcessorDefaultService _defaultProcessor = defaultProcessor ?? throw new ArgumentNullException(nameof(defaultProcessor));
 		private readonly PaymentProcessorFallbackService _fallbackProcessor = fallbackProcessor ?? throw new ArgumentNullException(nameof(fallbackProcessor));
 
-		public IPaymentProcessorsService GetService(EProcessorService service)
-			=> service == EProcessorService.Default ? _defaultProcessor : _fallbackProcessor;
+		//public IPaymentProcessorsService GetService(EProcessorService service)
+		//	=> service == EProcessorService.Default ? _defaultProcessor : _fallbackProcessor;
+
+        public IPaymentProcessorsService GetService(string service)
+            => service == "1" ? _defaultProcessor : _fallbackProcessor;
     }
+
+
 
 	public class PaymentProcessorDefaultService(HttpClient httpClient) : IPaymentProcessorsService
 	{
@@ -53,16 +59,16 @@ namespace rinha_de_backend_2025_server
 	{
 		private readonly string _connectionString = "Server=server-db;Port=5432;User Id=postgres;Password=postgres;Database=rinha;Pooling=true;Minimum Pool Size=10;Maximum Pool Size=200;";
 
-		public async Task Add(EProcessorService processor, decimal amount, CancellationToken cancellationToken)
+		public async Task Add(int processor, decimal amount, CancellationToken cancellationToken)
 		{
-			using var conn = new NpgsqlConnection(_connectionString);
+			await using var conn = new NpgsqlConnection(_connectionString);
 			try
 			{
 				await conn.OpenAsync(cancellationToken);
 
 				string query = @$"INSERT INTO payments (processor, amount, requested_at) VALUES (@p0, @p1, @p2)";
 
-				await conn.ExecuteAsync(query, new { p0 = (int)processor, p1 = amount, p2 = DateTime.UtcNow });
+				await conn.ExecuteAsync(query, new { p0 = processor, p1 = amount, p2 = DateTime.UtcNow });
 			}
 			catch (Exception) { throw; }
 			finally { conn.Close(); }
@@ -70,7 +76,7 @@ namespace rinha_de_backend_2025_server
 
 		public async Task<IEnumerable<PaymentDTO>> Summary(DateTime? From, DateTime? To, CancellationToken cancellationToken)
 		{
-			using var conn = new NpgsqlConnection(_connectionString);
+			await using var conn = new NpgsqlConnection(_connectionString);
 			try
 			{
 				await conn.OpenAsync(cancellationToken);
@@ -83,6 +89,16 @@ namespace rinha_de_backend_2025_server
 			}
 			catch (Exception) { throw; }
 			finally { conn.Close(); }
+		}
+	}
+
+	public class RedisRepository(IConnectionMultiplexer redis)
+	{
+		private readonly IDatabase _db = redis.GetDatabase();
+
+		public async Task GetCurrentService()
+		{
+
 		}
 	}
 }

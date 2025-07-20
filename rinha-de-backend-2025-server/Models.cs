@@ -45,7 +45,7 @@ namespace rinha_de_backend_2025_server
 
 	public struct PaymentDTO
 	{
-		public EProcessorService Processor { get; set; }
+		public int Processor { get; set; }
 
 		public decimal Amount { get; set; }
 	}
