@@ -1,7 +1,8 @@
-﻿using Dapper;
-using Npgsql;
+﻿using Npgsql;
+using StackExchange.Redis;
+using System.Net.Http.Json;
 
-namespace rinha_de_backend_2025_server
+namespace rinha_de_backend_2025_retry
 {
 	public interface IPaymentProcessorsService
 	{
@@ -12,9 +13,6 @@ namespace rinha_de_backend_2025_server
 	{
 		private readonly PaymentProcessorDefaultService _defaultProcessor = defaultProcessor ?? throw new ArgumentNullException(nameof(defaultProcessor));
 		private readonly PaymentProcessorFallbackService _fallbackProcessor = fallbackProcessor ?? throw new ArgumentNullException(nameof(fallbackProcessor));
-
-		//public IPaymentProcessorsService GetService(EProcessorService service)
-		//	=> service == EProcessorService.Default ? _defaultProcessor : _fallbackProcessor;
 
         public IPaymentProcessorsService GetService(string service)
             => service == "1" ? _defaultProcessor : _fallbackProcessor;
@@ -67,18 +65,6 @@ namespace rinha_de_backend_2025_server
 			cmd.Prepare();
 			
 			await cmd.ExecuteNonQueryAsync(cancellationToken);
-		}
-
-		public async Task<IEnumerable<PaymentDTO>> Summary(DateTime? from, DateTime? to, CancellationToken cancellationToken)
-		{
-			string query = @"SELECT processor, amount FROM payments WHERE 
-				(@From::timestamp IS NULL OR requested_at >= @From::timestamp) 
-				AND (@To::timestamp IS NULL OR requested_at <= @To::timestamp)";
-
-			await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
-			var parameters = new { From = from, To = to };
-
-			return await conn.QueryAsync<PaymentDTO>(query, parameters);
 		}
 	}
 }

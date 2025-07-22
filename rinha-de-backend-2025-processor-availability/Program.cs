@@ -6,18 +6,18 @@ builder.Services.AddHostedService<Worker>();
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-	options.Configuration = Environment.GetEnvironmentVariable("Redis__Connection") ?? string.Empty;
-	options.InstanceName = Environment.GetEnvironmentVariable("Redis__Suffix") ?? string.Empty;
+	options.Configuration = builder.Configuration["Redis:Connection"] ?? string.Empty;
+	options.InstanceName = builder.Configuration["Redis:Suffix"] ?? string.Empty;
 });
 
 builder.Services.AddHttpClient<PaymentProcessorDefaultService>("default", client =>
 {
-	client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("Payments__Default") ?? string.Empty);
+	client.BaseAddress = new Uri(builder.Configuration["Payments:Default"] ?? string.Empty);
 });
 
 builder.Services.AddHttpClient<PaymentProcessorFallbackService>("fallback", client =>
 {
-	client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("Payments__Fallback") ?? string.Empty);
+	client.BaseAddress = new Uri(builder.Configuration["Payments:Fallback"] ?? string.Empty);
 });
 
 var host = builder.Build();

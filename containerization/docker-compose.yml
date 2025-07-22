@@ -5,11 +5,12 @@ x-server: &default-server
   networks:
       - payment-processor
   environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      Payments__Default: http://payment-processor-default:8080/
-      Payments__Fallback: http://payment-processor-fallback:8080/
-      Redis__Connection: redis-server:6379, password=senha123
-      Redis__Suffix: rinha_
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Payments__Default=http://payment-processor-default:8080/
+      - Payments__Fallback=http://payment-processor-fallback:8080/
+      - Redis__Connection=redis-server:6379, password=senha123
+      - Redis__Suffix=rinha_
+      - Banco__ConnectionString=Server=server-db;Port=5432;User Id=postgres;Password=postgres;Database=rinha;Pooling=true;Minimum Pool Size=10;Maximum Pool Size=200
   depends_on:
       - server-db
 
@@ -31,11 +32,11 @@ services:
     networks:
       - payment-processor
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      Payments__Default: http://payment-processor-default:8080/
-      Payments__Fallback: http://payment-processor-fallback:8080/
-      Redis__Connection: redis-server:6379, password=senha123
-      Redis__Suffix: rinha_
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Payments__Default=http://payment-processor-default:8080/
+      - Payments__Fallback=http://payment-processor-fallback:8080/
+      - Redis__Connection=redis-server:6379, password=senha123
+      - Redis__Suffix=rinha_
     depends_on:
       - redis
       
